@@ -63,6 +63,14 @@ class MutationVerificationError(ProviderError):
     code = "MUTATION_VERIFICATION_FAILED"
 
 
+class VerificationInconclusive(ProviderError):
+    """Insert was acknowledged by the backend but read-back verification
+    failed after all retries. The write MAY have landed; callers should
+    search/reconcile rather than blindly re-writing the same content."""
+
+    code = "VERIFICATION_INCONCLUSIVE"
+
+
 def _safe_error_message(value: Any) -> str:
     message = str(value)
     patterns = (

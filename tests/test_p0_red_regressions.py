@@ -133,18 +133,40 @@ def test_p0_d_tool_output_is_valid_json_after_budget_enforcement(provider):
     assert parsed["output_truncated"] is True
 
 
-def test_p0_e_forged_owner_metadata_is_not_accepted_as_authenticated(plugin, provider, fake_client):
+def test_p0_e_forged_owner_metadata_is_not_accepted_as_authenticated(plugin, provider, fake_client, tmp_path):
     content = "forged ownership record"
-    digest = provider._logical_digest("memory", "hermes-builtin-memory", content)
-    point_id = plugin._candidate_id(digest, 0)
+    target = "memory"
+    source = "hermes-builtin-memory"
+    trust = "builtin-curated"
+    # v2.8.0: IDs are sequential; the ledger mapping (digest -> point id) is
+    # what drives the dedup/ownership check. Register the digest exactly as
+    # the store path computes it, pointing at a point whose HMAC signature is
+    # forged (owner/digest metadata present, signature invalid).
+    digest = provider._logical_digest(target, source, content)
+    point_id = 1
+    from datetime import datetime, timezone
+    provider._ledger.upsert(plugin.LedgerRecord(
+        digest=digest, external_id=point_id,
+        profile_scope=provider._profile_scope,
+        target=target, source=source, content=content,
+        status="active", error="",
+        updated_at=datetime.now(timezone.utc).isoformat(),
+    ))
     fake_client.points[point_id] = _owned_point(plugin, point_id, digest)
-    with pytest.raises(plugin.MutationConflict):
-        provider._store_content_sync(
-            target="memory",
-            source="hermes-builtin-memory",
-            trust="builtin-curated",
-            content=content,
-        )
+    # v2.8.0 invariant: an unauthenticated point is never accepted as a dedup
+    # hit (old code raised MutationConflict; new code skips it and stores at
+    # a fresh sequential ID - strictly safer: a planted forged point cannot
+    # DoS stores, and the forged bytes are never overwritten or trusted).
+    provider._store_content_sync(
+        target=target, source=source, trust=trust, content=content,
+    )
+    # The forged point must be untouched.
+    assert point_id in fake_client.points
+    assert fake_client.points[point_id]["metadata"].get("_hs_owner_signature") is None
+    # A new point was created at a DIFFERENT id.
+    written = [pid for pid in fake_client.points if pid != point_id]
+    assert written, "no new point written"
+    assert all(pid != point_id for pid in written)
 
 
 def test_p0_f_model_authored_owned_record_is_not_auto_prefetched(provider, fake_client):

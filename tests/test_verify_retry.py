@@ -106,7 +106,9 @@ def test_verify_still_fails_when_point_never_appears(plugin, tmp_path, monkeypat
         "content": "RETRY_EXHAUST_V10: point never visible must still fail closed",
     })
     assert '"ok": false' in out or '"ok":false' in out
-    assert "MUTATION_VERIFICATION_FAILED" in out
+    # v2.8.0: insert was ACKed, verify inconclusive -> distinct status so
+    # callers do not blindly re-write content that may have landed.
+    assert "VERIFICATION_INCONCLUSIVE" in out
     flaky.shutdown()
 
 

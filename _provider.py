@@ -80,6 +80,7 @@ if __package__:
         InvalidArgument,
         MutationConflict,
         MutationVerificationError,
+        VerificationInconclusive,
         ProviderError,
         _classify_exception,
         _json_error,
@@ -200,6 +201,7 @@ else:
         InvalidArgument,
         MutationConflict,
         MutationVerificationError,
+        VerificationInconclusive,
         ProviderError,
         _classify_exception,
         _json_error,
@@ -887,21 +889,44 @@ class HyperspaceDBMemoryProvider(MemoryProvider):
             raise BackendMalformed("Health RPC returned no state")
 
     def _allocate_id(self, digest: str) -> Tuple[int, bool]:
-        for probe in range(self._collision_probes):
-            candidate = _candidate_id(digest, probe)
+        """Allocate a small, dense point ID for this digest.
+
+        Issue#1 Finding 1 fix: hash-derived uint32 IDs land >= 2^28 for ~94%
+        of contents and the server allocates memory proportional to the ID
+        value on document/payload inserts (upstream YARlabs#14). The numeric
+        ID is a storage handle only; the logical identity remains the digest
+        (kept in _hs_digest metadata, HMAC ownership verification unchanged).
+        """
+        # Dedup fast path: ledger already knows this digest's point.
+        known = self._ledger.get(digest)
+        if known is not None:
+            points = self._call(
+                "get_points", [known.external_id], collection=self._collection
+            )
+            if isinstance(points, list) and points:
+                for point in points:
+                    meta = _metadata(point)
+                    if (
+                        meta.get("_hs_owner") == _PLUGIN_ID
+                        and meta.get("_hs_digest") == digest
+                        and self._point_owner_matches(point, digest)
+                    ):
+                        return known.external_id, True
+            # Ledger mapping stale (point deleted server-side): fall through
+            # and allocate a fresh small ID.
+
+        for _ in range(self._collision_probes):
+            candidate = self._ledger.next_external_id()
             points = self._call("get_points", [candidate], collection=self._collection)
             if not isinstance(points, list):
                 raise BackendMalformed("get_points returned a non-list response")
             if not points:
                 self._backend_proven_alive()
                 return candidate, False
-            for point in points:
-                meta = _metadata(point)
-                if meta.get("_hs_owner") == _PLUGIN_ID and meta.get("_hs_digest") == digest:
-                    if not self._point_owner_matches(point, digest):
-                        raise MutationConflict("Ownership metadata failed authentication")
-                    return candidate, True
-        raise CollisionExhausted("No collision-free uint32 ID was found")
+            # Foreign or orphaned occupant: skip this ID, keep the counter
+            # ahead so we never probe it again.
+            self._ledger.observe_external_id(candidate)
+        raise CollisionExhausted("No collision-free sequential ID was found")
 
     def _internal_metadata(
         self, target: str, source: str, trust: str, content: str, digest: str,
@@ -962,8 +987,10 @@ class HyperspaceDBMemoryProvider(MemoryProvider):
                 self._point_owner_matches(point, digest) for point in points
             ):
                 return
-            last_error = MutationVerificationError(
-                "Read-after-write ownership verification failed"
+            last_error = VerificationInconclusive(
+                "Insert acknowledged but read-after-write verification is "
+                "inconclusive; the point may still appear. Search or "
+                "reconcile instead of re-writing."
             )
             if attempt < VERIFY_RETRY_ATTEMPTS:
                 time.sleep(VERIFY_RETRY_DELAY_SECONDS)

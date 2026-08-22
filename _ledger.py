@@ -70,6 +70,10 @@ class IdentityLedger:
                     self._db.execute("BEGIN IMMEDIATE")
                     try:
                         self._db.execute(
+                            "CREATE TABLE IF NOT EXISTS meta ("
+                            "key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+                        )
+                        self._db.execute(
                             "CREATE TABLE IF NOT EXISTS records ("
                             "digest TEXT PRIMARY KEY, external_id INTEGER NOT NULL UNIQUE, "
                             "profile_scope TEXT NOT NULL, target TEXT NOT NULL, source TEXT NOT NULL, "
@@ -377,6 +381,40 @@ class IdentityLedger:
         temporary.replace(destination)
         os.chmod(destination, 0o600)
         return destination
+
+    def next_external_id(self) -> int:
+        """Next small dense point ID (monotonic counter in meta table).
+
+        The numeric HSDB point ID is a storage handle only; the logical
+        identity remains the content digest. Small dense IDs avoid the
+        server-side allocation proportional to ID value (Issue#1 Finding 1;
+        upstream YARlabs#14).
+        """
+        with self._lock:
+            row = self._db.execute(
+                "SELECT value FROM meta WHERE key='next_external_id'"
+            ).fetchone()
+            current = int(row[0]) if row else 1
+            self._db.execute(
+                "INSERT INTO meta(key,value) VALUES('next_external_id',?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (str(current + 1),),
+            )
+            self._db.commit()
+            return current
+
+    def observe_external_id(self, external_id: int) -> None:
+        """Keep the counter ahead of any externally-seen ID."""
+        with self._lock:
+            row = self._db.execute(
+                "SELECT value FROM meta WHERE key='next_external_id'"
+            ).fetchone()
+            if row and int(row[0]) <= external_id:
+                self._db.execute(
+                    "UPDATE meta SET value=? WHERE key='next_external_id'",
+                    (str(external_id + 1),),
+                )
+                self._db.commit()
 
     def close(self) -> None:
         with self._lock:

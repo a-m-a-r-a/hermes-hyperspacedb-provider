@@ -4,7 +4,7 @@
 
 **Make the memory fail closed.**
 
-[![Version](https://img.shields.io/badge/version-2.7.0-black?style=flat-square)](plugin.yaml)
+[![Version](https://img.shields.io/badge/version-2.8.0-black?style=flat-square)](plugin.yaml)
 [![Hermes Provider](https://img.shields.io/badge/Hermes-Memory_Provider-111111?style=flat-square)](https://github.com/NousResearch/hermes-agent)
 [![License](https://img.shields.io/badge/license-MIT-black?style=flat-square)](#license)
 [![CI](https://img.shields.io/github/actions/workflow/status/antydizajn/hermes-hyperspacedb-provider/ci.yml?branch=main&style=flat-square&label=CI&color=black)](https://github.com/antydizajn/hermes-hyperspacedb-provider/actions/workflows/ci.yml)
@@ -42,6 +42,17 @@ This provider treats memory as an auditable state machine with deterministic loc
 - **Strict mutation contracts**: `replace` and `remove` require exact needle matching and fail if target memories are missing or ambiguous.
 - **Isolated capability handles**: graph and hierarchy exploration tools use opaque capability tokens (`hsdbh_*`) rather than exposing raw backend point IDs to LLM contexts.
 - **Verified CI artifact continuity**: releases are produced exclusively from green GitHub Actions builds with deterministic SHA-256 manifests.
+
+---
+
+## Automatic prefetch notes
+
+`prefetch()` (automatic memory injection) is deliberately stricter than `hyperspace_search`:
+
+- Under the default `trust_mode: owned_only`, only records written by this plugin (source in the plugin's owned set) are returned. Records that pre-date the plugin or were written by another provider carry no matching `source`, so prefetch returns nothing for them even though `hyperspace_search` finds them. This is fail-closed by design.
+- With `trust_mode: annotate_all`, set an explicit `max_distance`. Note that with `hybrid_search: true` the server's `distance` values behave as a rank ladder rather than a calibrated metric, so thresholds do not transfer from hybrid to pure-vector search.
+
+If "search works but automatic recall is silent", check these three settings first: `trust_mode`, `max_distance`, and `hybrid_search`.
 
 ---
 
@@ -134,7 +145,7 @@ rsync -av --exclude '.git' --exclude '__pycache__' --exclude 'dist' /path/to/rep
 Or install the packaged wheel in your Hermes Agent virtual environment:
 
 ```bash
-pip install hermes_hyperspacedb_provider-2.7.0-py3-none-any.whl
+pip install hermes_hyperspacedb_provider-2.8.0-py3-none-any.whl
 ```
 
 ### Recommended companion integrations
@@ -210,7 +221,12 @@ python3 tests/run_test_collection_e2e.py
 
 ## Status
 
-Version 2.7.0 adds bounded verify retry after live production E2E testing (2026-08-22) on top of the 2.6.0 hardening:
+Version 2.8.0 fixes the point-ID allocation strategy flagged in issue #1:
+
+1. **Sequential point IDs from the ledger** (issue #1, Finding 1): hash-derived uint32 IDs landed at or above 2^28 for roughly 94% of contents, and the server allocates memory proportional to the numeric ID value when a document or payload is attached (upstream YARlabs#14), so large IDs could exhaust server RAM. Allocated IDs are now small, dense integers from the ledger counter; the content digest remains the logical identity in `_hs_digest` metadata and HMAC ownership verification is unchanged. Unauthenticated points are skipped, never overwritten, and no longer block stores.
+2. **Distinct `VERIFICATION_INCONCLUSIVE` status** (issue #1, Finding 2): when the backend acknowledges an insert but read-after-write verification fails after all retries, the tool now reports `VERIFICATION_INCONCLUSIVE` with reconciliation guidance instead of the generic verification failure, so callers do not blindly re-write content that may have landed. Ledger state (`retry_pending`) is unchanged.
+
+Version 2.7.0 added bounded verify retry after live production E2E testing (2026-08-22):
 
 1. **Bounded read-after-write verify retry**: The SDK `get_points()` call swallows transient RPC errors and returns an empty list, so a single server blip during the immediate post-insert read raised `MUTATION_VERIFICATION_FAILED` for writes that had actually landed (durability committed; live-measured at roughly 5% of stores under load). Verification now retries up to 3 attempts with a 0.5 second delay before declaring failure. The happy path stays single-shot and fail-closed semantics are unchanged when a point truly never appears.
 2. **`rpc_timeout` ceiling raised 60s → 300s** (v2.6.0): The previous hard clamp silently truncated configured values above 60 seconds. Live measurement on a large production collection showed server-side vectorize at 16 to 40 seconds plus two `get_points` verification round-trips, so a configured 120s deadline was clamped to an effective 60s and produced spurious `BACKEND_TIMEOUT` / `retry_pending` records. Configure `rpc_timeout: 120.0` (or higher, up to 300s) when your HyperspaceDB instance serves large collections or runs with embedding enabled; the default remains 4.0s.
@@ -248,7 +264,7 @@ It guarantees fail-closed mutation durability, deterministic local ordering, and
 hermes-hyperspacedb-provider/
 ├── README.md                             # Public contract, architecture, and documentation
 ├── LICENSE                               # MIT License
-├── plugin.yaml                           # Hermes Agent plugin manifest (v2.7.0)
+├── plugin.yaml                           # Hermes Agent plugin manifest (v2.8.0)
 ├── pyproject.toml                        # Build system, dependencies, and wheel boundaries
 ├── __init__.py                           # Public package root and exports
 ├── _capabilities.py                      # Tool capability definitions and schemas
