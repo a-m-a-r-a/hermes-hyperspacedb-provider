@@ -63,6 +63,11 @@ class IdentityLedger:
             with self._lock:
                 self._db.execute("PRAGMA journal_mode=WAL")
                 self._db.execute("PRAGMA synchronous=FULL")
+                # meta table needed by all schema versions (ID counter).
+                self._db.execute(
+                    "CREATE TABLE IF NOT EXISTS meta ("
+                    "key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+                )
                 version = int(self._db.execute("PRAGMA user_version").fetchone()[0])
                 if version > 3:
                     raise ConfigurationError("Ledger schema is newer than this plugin")
