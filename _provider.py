@@ -929,7 +929,7 @@ class HyperspaceDBMemoryProvider(MemoryProvider):
             # counter ahead - low ID ranges can contain long contiguous runs
             # of legacy imported points (each get_points probe costs seconds
             # on a large collection, so probing one-by-one is too slow).
-            self._ledger.observe_external_id(candidate + _COLLISION_STRIDE)
+            self._ledger.observe_external_id(candidate + COLLISION_STRIDE)
         raise CollisionExhausted("No collision-free sequential ID was found")
 
     def _internal_metadata(
