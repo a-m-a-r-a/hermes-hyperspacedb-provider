@@ -266,3 +266,10 @@ _INJECTION_PATTERNS: Tuple[re.Pattern, ...] = tuple(
 # while absorbing blips; fail-closed semantics unchanged on true absence.
 VERIFY_RETRY_ATTEMPTS = 3
 VERIFY_RETRY_DELAY_SECONDS = 0.5
+
+
+# When a sequential candidate ID is occupied by a foreign/legacy point, the
+# counter jumps forward by this stride instead of +1: low uint32 ranges on
+# migrated collections contain long runs of imported points, and each
+# occupancy probe is a full RPC round-trip.
+COLLISION_STRIDE = 16

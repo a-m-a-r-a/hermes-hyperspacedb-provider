@@ -52,6 +52,7 @@ if __package__:
         _TOOL_ALLOWED_ARGS,
         VERIFY_RETRY_ATTEMPTS,
         VERIFY_RETRY_DELAY_SECONDS,
+        COLLISION_STRIDE,
         HSDB_ADMIN_SCHEMA,
         HSDB_AUDIT_SCHEMA,
         HSDB_BATCH_SCHEMA,
@@ -173,6 +174,7 @@ else:
         _TOOL_ALLOWED_ARGS,
         VERIFY_RETRY_ATTEMPTS,
         VERIFY_RETRY_DELAY_SECONDS,
+        COLLISION_STRIDE,
         HSDB_ADMIN_SCHEMA,
         HSDB_AUDIT_SCHEMA,
         HSDB_BATCH_SCHEMA,
@@ -923,9 +925,11 @@ class HyperspaceDBMemoryProvider(MemoryProvider):
             if not points:
                 self._backend_proven_alive()
                 return candidate, False
-            # Foreign or orphaned occupant: skip this ID, keep the counter
-            # ahead so we never probe it again.
-            self._ledger.observe_external_id(candidate)
+            # Foreign or orphaned occupant: skip this ID and jump the
+            # counter ahead - low ID ranges can contain long contiguous runs
+            # of legacy imported points (each get_points probe costs seconds
+            # on a large collection, so probing one-by-one is too slow).
+            self._ledger.observe_external_id(candidate + _COLLISION_STRIDE)
         raise CollisionExhausted("No collision-free sequential ID was found")
 
     def _internal_metadata(
