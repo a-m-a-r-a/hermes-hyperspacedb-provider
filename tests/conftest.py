@@ -231,3 +231,24 @@ def provider(plugin, fake_client, tmp_path):
     p.initialize("test-session")
     yield p
     p.shutdown()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Make the stub boundary visible in every run (issue #1 follow-up).
+
+    Most suites run against FakeClient from this conftest plus a stubbed SDK
+    unless HSDB_REQUIRE_REAL_SDK=1. Print one line so nobody mistakes a green
+    run for a real-backend validation.
+    """
+    backend = "real-sdk" if _REQUIRE_REAL_SDK else "stub-sdk"
+    files = set()
+    for item in getattr(session, "items", []) or []:
+        try:
+            files.add(Path(item.fspath).name)
+        except Exception:
+            continue
+    print(
+        f"\n[coverage] backend={backend} "
+        f"test_files={len(files)} "
+        "(FakeClient unless HSDB_REQUIRE_REAL_SDK=1)"
+    )
