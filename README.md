@@ -4,7 +4,7 @@
 
 **Make the memory fail closed.**
 
-[![Version](https://img.shields.io/badge/version-2.8.0-black?style=flat-square)](plugin.yaml)
+[![Version](https://img.shields.io/badge/version-2.8.1-black?style=flat-square)](plugin.yaml)
 [![Hermes Provider](https://img.shields.io/badge/Hermes-Memory_Provider-111111?style=flat-square)](https://github.com/NousResearch/hermes-agent)
 [![License](https://img.shields.io/badge/license-MIT-black?style=flat-square)](#license)
 [![CI](https://img.shields.io/github/actions/workflow/status/antydizajn/hermes-hyperspacedb-provider/ci.yml?branch=main&style=flat-square&label=CI&color=black)](https://github.com/antydizajn/hermes-hyperspacedb-provider/actions/workflows/ci.yml)
@@ -145,7 +145,7 @@ rsync -av --exclude '.git' --exclude '__pycache__' --exclude 'dist' /path/to/rep
 Or install the packaged wheel in your Hermes Agent virtual environment:
 
 ```bash
-pip install hermes_hyperspacedb_provider-2.8.0-py3-none-any.whl
+pip install hermes_hyperspacedb_provider-2.8.1-py3-none-any.whl
 ```
 
 ### Recommended companion integrations
@@ -221,6 +221,12 @@ python3 tests/run_test_collection_e2e.py
 
 ## Status
 
+Version 2.8.1 hardens the sequential-ID path against migrated collections (2026-09-13):
+
+1. **Stride-skip occupied IDs** (aa71344): low uint32 ranges on migrated collections contain long contiguous runs of foreign points; probing one-by-one costs a full RPC per ID (~2.5s on a 408k-point collection) and can exhaust collision probes. On an occupied candidate the counter now jumps forward by `COLLISION_STRIDE` (16) instead of +1. Regression-tested: 3 contiguous foreign runs resolve in 3 probes instead of ~48; the counter never moves backwards.
+2. **`COLLISION_STRIDE` import fix** (d5ee0fc): the stride path referenced a constant without importing it, raising `NameError` on first collision. Now imported from `_constants` in both package and flat import modes.
+3. **Ledger meta-table on existing ledgers** (0586f12): the `meta` table (ID counter) is now created regardless of the stored schema version, so legacy ledgers that predate the meta table keep working instead of failing on the first ID-counter read.
+
 Version 2.8.0 fixes the point-ID allocation strategy flagged in issue #1:
 
 1. **Sequential point IDs from the ledger** (issue #1, Finding 1): hash-derived uint32 IDs landed at or above 2^28 for roughly 94% of contents, and the server allocates memory proportional to the numeric ID value when a document or payload is attached (upstream YARlabs#14), so large IDs could exhaust server RAM. Allocated IDs are now small, dense integers from the ledger counter; the content digest remains the logical identity in `_hs_digest` metadata and HMAC ownership verification is unchanged. Unauthenticated points are skipped, never overwritten, and no longer block stores.
@@ -264,7 +270,7 @@ It guarantees fail-closed mutation durability, deterministic local ordering, and
 hermes-hyperspacedb-provider/
 ├── README.md                             # Public contract, architecture, and documentation
 ├── LICENSE                               # MIT License
-├── plugin.yaml                           # Hermes Agent plugin manifest (v2.8.0)
+├── plugin.yaml                           # Hermes Agent plugin manifest (v2.8.1)
 ├── pyproject.toml                        # Build system, dependencies, and wheel boundaries
 ├── __init__.py                           # Public package root and exports
 ├── _capabilities.py                      # Tool capability definitions and schemas
