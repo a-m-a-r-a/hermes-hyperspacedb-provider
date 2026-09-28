@@ -1,6 +1,6 @@
 # Why this fork exists
 
-Upstream: [antydizajn/hermes-hyperspacedb-provider](https://github.com/antydizajn/hermes-hyperspacedb-provider).
+Upstream: see the [original provider attribution and repository link](../README.md).
 Base: `1b7ce96`, upstream 2.8.1. This fork adds bounded cognitive geometry while
 keeping upstream ownership, ledger and fail-closed behavior. It does not claim to
 be the upstream project or a complete implementation of the official Hyperspace MCP.
