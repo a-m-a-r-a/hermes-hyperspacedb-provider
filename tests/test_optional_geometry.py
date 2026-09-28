@@ -33,7 +33,7 @@ def _geometry(provider, **args):
 def test_geometry_schema_and_capability_only_diagnostics(provider, fake_client, plugin):
     handles = _issued_handles(provider, fake_client, [0.05, 0.10, 0.15])
     schema = plugin.HSDB_GEOMETRY_SCHEMA["parameters"]["properties"]
-    assert schema["operation"]["enum"] == ["predict_relation", "predict_momentum", "trust_score"]
+    assert schema["operation"]["enum"] == ["predict_relation", "predict_momentum", "trust_score", "analyze_thought_stability", "analyze_geometry"]
     assert "ids" not in schema
     assert "collection" not in schema
 

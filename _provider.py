@@ -1684,7 +1684,7 @@ class HyperspaceDBMemoryProvider(MemoryProvider):
                 raise BackendMalformed("Lorentz-to-Poincare conversion failed") from error
             if not isinstance(poincare, list) or len(poincare) != 128:
                 raise BackendMalformed("Lorentz-to-Poincare conversion returned an invalid dimension")
-            if any(not isinstance(value, (int, float)) or not math.isfinite(float(value)) for value in poincare):
+            if any(isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) for value in poincare):
                 raise BackendMalformed("Lorentz-to-Poincare conversion returned non-finite values")
             radius_sq = sum(float(value) * float(value) for value in poincare)
             if not math.isfinite(radius_sq) or radius_sq >= 1.0:
@@ -1700,8 +1700,8 @@ class HyperspaceDBMemoryProvider(MemoryProvider):
         try:
             self._require_geometry_contract()
             operation = str(args.get("operation") or "")
-            if operation not in {"predict_relation", "predict_momentum", "trust_score"}:
-                raise InvalidArgument("operation must be predict_relation, predict_momentum, or trust_score")
+            if operation not in {"predict_relation", "predict_momentum", "trust_score", "analyze_thought_stability", "analyze_geometry"}:
+                raise InvalidArgument("Unknown geometry operation")
             handles = args.get("handles")
             if not isinstance(handles, list):
                 raise InvalidArgument("handles must be a capability-handle list")
@@ -1715,6 +1715,27 @@ class HyperspaceDBMemoryProvider(MemoryProvider):
                 raise DiagnosticUnavailable(
                     "trust_score is unavailable: the current upstream formula is degenerate"
                 )
+            if operation in {"analyze_thought_stability", "analyze_geometry"}:
+                minimum = 3 if operation == "analyze_thought_stability" else 4
+                if not minimum <= len(handles) <= 16:
+                    raise InvalidArgument(f"{operation} requires {minimum} to 16 handles")
+                if "steps" in args:
+                    raise InvalidArgument("steps is only supported by predict_momentum")
+                if __package__:
+                    from ._cognitive import analyze_geometry, analyze_thought_stability
+                else:
+                    from _cognitive import analyze_geometry, analyze_thought_stability
+                vectors = self._geometry_points(handles)
+                analyze = (analyze_thought_stability if operation == "analyze_thought_stability"
+                           else analyze_geometry)
+                return self._tool_json({
+                    "ok": True, "diagnostic_kind": "cognitive_geometry",
+                    "metric": "lorentz", "curvature": 1.0,
+                    "input_dimension": 129, "point_count": len(vectors),
+                    "interpretation": "Geometry only; not factual truth, confidence, or safety. "
+                                      "Input order must be supplied by the caller, not search rank.",
+                    "result": analyze(vectors),
+                })
             if len(handles) != 2:
                 raise InvalidArgument(f"{operation} requires exactly 2 capability handles")
             steps: Optional[float] = None

@@ -191,15 +191,14 @@ HSDB_ADMIN_SCHEMA = {
 HSDB_GEOMETRY_SCHEMA = {
     "name": "hyperspace_geometry",
     "description": (
-        "Run bounded geometric diagnostics on capability-scoped Lorentz 129D points. "
-        "predict_relation and predict_momentum return scalar summaries only; "
-        "trust_score is explicitly unavailable until the upstream formula is non-degenerate. "
-        "This never establishes factual truth or safety."
+        "Bounded cognitive geometry on ordered Lorentz 129D handles. "
+        "Stability is a step-length trend, not truth or a Lyapunov exponent. "
+        "Momentum and Gromov delta return summaries; trust_score is unavailable."
     ),
     "parameters": {
         "type": "object",
         "properties": {
-            "operation": {"type": "string", "enum": ["predict_relation", "predict_momentum", "trust_score"]},
+            "operation": {"type": "string", "enum": ["predict_relation", "predict_momentum", "trust_score", "analyze_thought_stability", "analyze_geometry"]},
             "handles": {"type": "array", "items": {"type": "string"}, "maxItems": 16},
             "steps": {"type": "number"},
         },

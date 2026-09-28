@@ -1,3 +1,8 @@
+> This fork is maintained by [a-m-a-r-a](https://github.com/a-m-a-r-a) and is based on
+> [antydizajn/hermes-hyperspacedb-provider](https://github.com/antydizajn/hermes-hyperspacedb-provider).
+> Original MIT attribution is preserved. Fork additions: bounded cognitive trajectory
+> diagnostics; see [Cognitive diagnostics](docs/cognitive.md). No runtime migration is automatic.
+
 <div align="center">
 
 # HyperspaceDB Memory Provider
@@ -114,7 +119,7 @@ The provider registers exactly ten bounded tools divided into primary memory ope
 7. **`hyperspace_graph`**: traverses concept relationship graphs using opaque capability handles (`hsdbh_*`) without exposing raw backend point IDs.
 8. **`hyperspace_hierarchy`**: explores Lorentz subsumption trees and parent concept relationships.
 9. **`hyperspace_search_advanced`**: executes bounded Wasserstein (Optimal Transport) and Wave distance searches.
-10. **`hyperspace_geometry`**: computes Lorentz Poincaré scalar metrics (`predict_relation`, `predict_momentum`, `trust_score`). `trust_score` returns `DIAGNOSTIC_UNAVAILABLE`: the current upstream formula degenerates to constant 0.5 in the relevant case, so the provider deliberately refuses to expose it as a meaningful score. These scalar outputs are geometric diagnostics, not evidence that a memory is factually true or safe.
+10. **`hyperspace_geometry`**: computes Lorentz Poincaré scalar metrics (`predict_relation`, `predict_momentum`, `trust_score`, `analyze_thought_stability`, `analyze_geometry`). `trust_score` returns `DIAGNOSTIC_UNAVAILABLE`: the current upstream formula degenerates to constant 0.5 in the relevant case, so the provider deliberately refuses to expose it as a meaningful score. These scalar outputs are geometric diagnostics, not evidence that a memory is factually true or safe.
 
 ---
 
