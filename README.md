@@ -2,6 +2,10 @@
 > [antydizajn/hermes-hyperspacedb-provider](https://github.com/antydizajn/hermes-hyperspacedb-provider).
 > Original MIT attribution is preserved. Fork additions: bounded cognitive trajectory
 > diagnostics; see [Cognitive diagnostics](docs/cognitive.md). No runtime migration is automatic.
+>
+> **Fork guide:** [Why this fork / upstream differences](docs/fork.md) ·
+> [Changelog](CHANGELOG.md) · [OpenClaw integration & sidecar](docs/openclaw.md).
+> OpenClaw support lives in the companion adapter, not in this Python package alone.
 
 <div align="center">
 
@@ -12,7 +16,7 @@
 [![Version](https://img.shields.io/badge/version-2.8.1-black?style=flat-square)](plugin.yaml)
 [![Hermes Provider](https://img.shields.io/badge/Hermes-Memory_Provider-111111?style=flat-square)](https://github.com/NousResearch/hermes-agent)
 [![License](https://img.shields.io/badge/license-MIT-black?style=flat-square)](#license)
-[![CI](https://img.shields.io/github/actions/workflow/status/antydizajn/hermes-hyperspacedb-provider/ci.yml?branch=main&style=flat-square&label=CI&color=black)](https://github.com/antydizajn/hermes-hyperspacedb-provider/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/a-m-a-r-a/hermes-hyperspacedb-provider/ci.yml?branch=main&style=flat-square&label=CI&color=black)](https://github.com/a-m-a-r-a/hermes-hyperspacedb-provider/actions/workflows/ci.yml)
 [![Geometry](https://img.shields.io/badge/geometry-Lorentz_129D-black?style=flat-square)](#how-it-works)
 [![Security](https://img.shields.io/badge/provenance-HMAC_authenticated-black?style=flat-square)](#provenance-and-trust-boundaries)
 
