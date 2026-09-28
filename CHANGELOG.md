@@ -10,6 +10,10 @@ The upstream MIT license and attribution are preserved.
   instructions. No claim that installing this provider alone installs OpenClaw tools.
 - Corrected the README CI badge/link to refer to this fork, not upstream results.
 - No Python behavior change in this documentation update.
+- Follow-up CI on `610fee5`: [successful run](https://github.com/a-m-a-r-a/hermes-hyperspacedb-provider/actions/runs/36493877210),
+  including Python 3.11/3.12 unit/contracts, packaging, Hermes discovery, SDK
+  import matrix and upstream Hermes canary. An initial release-hygiene failure
+  from duplicated upstream attribution was corrected by linking the canonical README.
 
 ## 2026-09-28 — Cognitive diagnostics (`7e59e33`)
 
